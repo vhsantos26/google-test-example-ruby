@@ -1,0 +1,14 @@
+# See full list of defaults here: https://github.com/bbatsov/rubocop/blob/master/config/default.yml
+# To see all cops used see here: https://github.com/bbatsov/rubocop/blob/master/config/enabled.yml
+
+Documentation:
+  Enabled: false
+
+ModuleLength:
+  Enabled: false
+
+ClassLength:
+  Enabled: false
+  
+LineLength:
+  Max: 180
