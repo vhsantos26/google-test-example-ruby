@@ -1,0 +1,110 @@
+# Versão do CircleCI que estamos utilizando
+version: 2
+
+# Jobs são os passos que serão executados ao realizarmos um commit
+jobs:
+  checkout_code:
+    docker:
+      - image: circleci/ruby:2.4-node
+    working_directory: ~/google-test-example
+    
+    # Neste step estamos fazendo o primeiro passo, que é o checkout, como o git clone que executamos anteriormente. 
+    # Aqui também salvamos em cache o repositório para agilizar os próximos passos.
+    steps:
+      - checkout
+      - save_cache:
+          key: google-repo-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/google-test-example
+
+  # Neste step vamos baixar as dependências do nosso problema, no caso, as gem's. 
+  # Como no passo checkout_code, salvamos as dependências em cache, sempre pensando na otimização dos passos seguintes.
+  bundle_dependencies:
+    working_directory: ~/google-test-example  
+    docker:
+      - image: circleci/ruby:2.4-node
+    steps:
+      - restore_cache:
+          keys:
+            - google-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - restore_cache:
+          keys:
+            - google-bundle-{{ .Branch }}
+      - run: 
+          name: Bundle install
+          command: bundle install --path vendor/bundle
+      - save_cache:
+          key: google-bundle-{{ .Branch }}-{{ epoch }}
+          paths:
+            - ~/google-test-example/vendor/bundle
+      - save_cache:
+          key: google-bundle-{{ .Branch }}
+          paths: 
+            - ~/google-test-example/vendor/bundle
+  
+  # Aqui está nosso primeiro teste, a análise estática do código. 
+  # Como fizemos manualmente, nós baixamos as dependências e executamos o comando rubocop
+  code_analyzer:
+    working_directory: ~/google-test-example  
+    docker:
+      - image: circleci/ruby:2.4-node
+    steps:
+      - restore_cache:
+          keys:
+            - google-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - restore_cache:
+          keys:
+            - google-bundle-{{ .Branch }}
+      - run: 
+          name: Bundle install
+          command: bundle install --path vendor/bundle
+      - run:
+          name: Rubocop analyzer
+          command: bundle exec rubocop
+
+  # Aqui está nosso segundo teste, os testes de interface.
+  # Como fizemos manualmente, nós baixamos as dependências e executamos o comando cucumber
+  # Além disso, salvamos os artefatos gerados pela execução dos testes
+  chrome_test:
+    working_directory: ~/google-test-example
+    docker:
+      - image: circleci/ruby:latest-browsers
+    steps:
+      - restore_cache:
+          keys:
+            - google-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - restore_cache:
+          keys:
+            - google-bundle-{{ .Branch }}
+      - run: 
+          name: Bundle install
+          command: bundle install --path vendor/bundle
+      - run: 
+          name: Execute all features scenarios (except @wip tags) on Goole Chrome browser
+          command: |
+            mkdir /tmp/test-results
+            bundle exec cucumber --format junit --out /tmp/test-results/junit.xml
+      - store_test_results:
+          path: /tmp/test-results/junit.xml
+      - store_artifacts:
+          path: /tmp/test-results/junit.xml
+
+# Aqui começa a mágia, que nada mais é que a configuramos do workflow
+workflows:
+  version: 2
+  build_and_test:
+    # Ao commitar, o sistema vai seguir a seguinte ordem, executando cada un dos jobs, na ordem definidada aqui.
+    # No caso, ele fará o seguinte: 'checkout_code' > 'bundle_dependencies' > 'code_analyzer' > 'chrome_test'
+    # Configuramos essa ordem através do atributo 'requires' dentro dos jobs abaixo.
+    jobs:
+      - checkout_code
+      - bundle_dependencies:
+          requires: 
+            - checkout_code
+      - code_analyzer:
+          requires:
+            - bundle_dependencies
+      - chrome_test:
+          requires:
+            - bundle_dependencies
+            - code_analyzer
