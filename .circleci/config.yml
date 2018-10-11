@@ -104,10 +104,10 @@ workflows:
 #            branches:
 #              only: master
     jobs:
-      - checkout_code
+      - build
       - bundle_dependencies:
           requires: 
-            - checkout_code
+            - build
       - code_analyzer:
           requires:
             - bundle_dependencies
