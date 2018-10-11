@@ -1,0 +1,9 @@
+---
+default: -p chrome -p html_report -p not_wip
+html_report: --format pretty --format html --out output/results/html/feature.html
+ci_report: --format progress --format json --out output/results/json/feature.json
+allure_report: --format pretty --format AllureCucumber::Formatter --out output/results/allure/
+not_wip: -t 'not @wip'
+chrome: DRIVER=chrome
+firefox: DRIVER=firefox
+safari: DRIVER=safari
