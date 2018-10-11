@@ -1,0 +1,122 @@
+version: 2
+
+jobs:
+  checkout_code:
+    docker:
+      - image: circleci/ruby:2.4-node
+    working_directory: ~/google-test-example-ruby
+    steps:
+      - checkout
+      - save_cache:
+          key: grt-repo-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/google-test-example-ruby
+
+  bundle_dependencies:
+    working_directory: ~/google-test-example-ruby  
+    docker:
+      - image: circleci/ruby:2.4-node
+    steps:
+      - restore_cache:
+          keys:
+            - grt-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - restore_cache:
+          keys:
+            - grt-bundle-{{ .Branch }}
+      - run: 
+          name: Bundle install
+          command: bundle install --path vendor/bundle
+      - save_cache:
+          key: grt-bundle-{{ .Branch }}-{{ epoch }}
+          paths:
+            - ~/google-test-example-ruby/vendor/bundle
+      - save_cache:
+          key: grt-bundle-{{ .Branch }}
+          paths: 
+            - ~/google-test-example-ruby/vendor/bundle
+  
+  code_analyzer:
+    working_directory: ~/google-test-example-ruby  
+    docker:
+      - image: circleci/ruby:2.4-node
+    steps:
+      - restore_cache:
+          keys:
+            - grt-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - restore_cache:
+          keys:
+            - grt-bundle-{{ .Branch }}
+      - run: 
+          name: Bundle install
+          command: bundle install --path vendor/bundle
+      - run:
+          name: Rubocop analyzer
+          command: bundle exec rubocop -c .rubocop.yml
+
+  chrome_test:
+    working_directory: ~/google-test-example-ruby
+    docker:
+      - image: circleci/ruby:latest-browsers
+    steps:
+      - restore_cache:
+          keys:
+            - grt-repo-{{ .Environment.CIRCLE_SHA1 }}
+      - restore_cache:
+          keys:
+            - grt-bundle-{{ .Branch }}
+      - run: 
+          name: Bundle install
+          command: bundle install --path vendor/bundle
+      - run: 
+          name: Execute all features scenarios (except @wip tags) on Goole Chrome browser
+          command: bundle exec cucumber --profile ci_report --profile not_wip
+      - store_test_results:
+          path: ~/cucumber/junit.xml
+      - store_artifacts:
+          path: ~/cucumber/junit.xml
+
+  # firefox_test:
+  #   working_directory: ~/google-test-example-ruby
+  #   docker:
+  #     - image: circleci/ruby:latest-browsers
+  #   steps:
+  #     - restore_cache:
+  #         keys:
+  #           - grt-repo-{{ .Environment.CIRCLE_SHA1 }}
+  #     - restore_cache:
+  #         keys:
+  #           - grt-bundle-{{ .Branch }}
+  #     - run: 
+  #         name: Bundle install
+  #         command: bundle install --path vendor/bundle
+  #     - run: 
+  #         name: Execute all features scenarios (except @wip tags) on Goole Chrome browser
+  #         command: bundle exec cucumber --profile firefox --profile not_wip --profile ci
+  #     - store_test_results:
+  #         path: ~/cucumber/junit.xml
+
+workflows:
+  version: 2
+  build_and_test:
+#    triggers:
+#      - schedule:
+#          cron: "* 4 * * *"
+#          filters:
+#            branches:
+#              only: master
+    jobs:
+      - checkout_code
+      - bundle_dependencies:
+          requires: 
+            - checkout_code
+      - code_analyzer:
+          requires:
+            - bundle_dependencies
+      - chrome_test:
+          requires:
+            - bundle_dependencies
+            - code_analyzer
+      # - firefox_test:
+      #     requires:
+      #       - bundle_dependencies
+      #       - code_analyzer

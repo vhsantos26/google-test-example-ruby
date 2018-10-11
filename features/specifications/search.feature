@@ -6,7 +6,7 @@ Feature: Search
   Scenario Outline: Success when searching for a specific CI.
     Given I access the Google
     When I search for '<ci_name>'
-    Then I see the CI searched on top of the list
+    Then I should see the CI searched on top of the list
     
     Examples:
     | ci_name  |

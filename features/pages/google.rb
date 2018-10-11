@@ -4,7 +4,7 @@ module App
       class IndexPage < SitePrism::Page
         set_url '/'
 
-        element :search_input, 'input#lst-ib'
+        element :search_input, 'input[title=Search]'
 
         def search_for(informacao)
           search_input.set informacao

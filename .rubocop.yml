@@ -12,3 +12,9 @@ ClassLength:
   
 LineLength:
   Max: 180
+
+Style/MixinUsage:
+  Enabled: false
+  
+Style/ClassAndModuleChildren: 
+  Enabled: false

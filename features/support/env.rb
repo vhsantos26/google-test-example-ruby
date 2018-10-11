@@ -1,11 +1,17 @@
+require 'allure-cucumber'
 require 'capybara'
 require 'capybara/cucumber'
+require 'dotenv'
 require 'rspec/expectations'
 require 'selenium-webdriver'
 require 'site_prism'
 
-Capybara.configure do |config|
-  config.app_host = 'https://www.google.com.br'
-  config.default_driver = :selenium_chrome
-  config.default_max_wait_time = 5
+Dotenv.load # realiza o load das variaveis do arquivo .env
+
+class Cucumber::Core::Test::Step
+  def name
+    return text if text == 'Before hook'
+    return text if text == 'After hook'
+    "#{source.last.keyword}#{text}"
+  end
 end

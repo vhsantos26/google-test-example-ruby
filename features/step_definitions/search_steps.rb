@@ -12,6 +12,6 @@ When('I search for {string}') do |ci_name|
   google_search.search_for(@ci)
 end
 
-Then('I see the CI searched on top of the list') do
+Then('I should see the CI searched on top of the list') do
   expect(google_result.results.first).to have_content(@ci)
 end
